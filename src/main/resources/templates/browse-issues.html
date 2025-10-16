@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicChain - Browse Issues</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Heatmap Plugin -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Leaflet/Leaflet.heat@v0.2.0/dist/leaflet-heat.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+            text-align: center;
+            border-radius: 0 0 50px 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .filter-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+
+        .map-container {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: white;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn {
+            border-radius: 25px;
+            padding: 0.7rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .heatmap-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        .severity-minor { background: #d4edda; color: #155724; }
+        .severity-moderate { background: #fff3cd; color: #856404; }
+        .severity-major { background: #f8d7da; color: #721c24; }
+        .severity-critical { background: #f5c6cb; color: #721c24; }
+
+        .issue-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .issue-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .location-pin {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .user-location-marker {
+            background: #28a745;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(40,167,69,0.5);
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-city me-2"></i>CivicChain
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+                <a class="nav-link" href="/user-portal">
+                    <i class="fas fa-user me-1"></i>Portal
+                </a>
+                <a class="nav-link active" href="/browse">
+                    <i class="fas fa-search me-1"></i>Browse Issues
+                </a>
+                <a class="nav-link" href="/leaderboard">
+                    <i class="fas fa-trophy me-1"></i>Leaderboard
+                </a>
+                <div th:if="${currentUser}">
+                    <span class="navbar-text me-3">
+                        <i class="fas fa-user-circle me-1"></i>
+                        <span th:text="${currentUser.username}">Username</span>
+                    </span>
+                    <a class="nav-link" href="/logout">
+                        <i class="fas fa-sign-out-alt me-1"></i>Logout
+                    </a>
+                </div>
+                <div th:unless="${currentUser}">
+                    <a class="nav-link" href="/login">
+                        <i class="fas fa-sign-in-alt me-1"></i>Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-map-marked-alt me-3"></i>Interactive Issue Map
+            </h1>
+            <p class="lead">Explore civic issues in your area with real-time data, AI verification status, and heatmap visualization.</p>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="row align-items-center">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-filter me-1"></i>Filters:
+                    </label>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="statusFilter">
+                        <option value="all">All Status</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="VERIFIED">Verified</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="RESOLVED">Resolved</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="typeFilter">
+                        <option value="all">All Types</option>
+                        <option value="POTHOLE">Pothole</option>
+                        <option value="GARBAGE">Garbage</option>
+                        <option value="STREETLIGHT">Streetlight</option>
+                        <option value="FLOOD">Flood</option>
+                        <option value="TRAFFIC">Traffic</option>
+                        <option value="VANDALISM">Vandalism</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="severityFilter">
+                        <option value="all">All Severities</option>
+                        <option value="MINOR">🟢 Minor</option>
+                        <option value="MODERATE">🟡 Moderate</option>
+                        <option value="MAJOR">🟠 Major</option>
+                        <option value="CRITICAL">🔴 Critical</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="aiVerifiedOnly">
+                        <label class="form-check-label" for="aiVerifiedOnly">
+                            <i class="fas fa-robot text-primary me-1"></i>AI Verified Only
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary" id="toggleHeatmap" onclick="toggleHeatmap()">
+                            <i class="fas fa-fire me-1"></i>Toggle Heatmap
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <label for="confidenceRange" class="form-label">
+                        Min Confidence: <span id="confidenceValue">0%</span>
+                    </label>
+                    <input type="range" class="form-range" min="0" max="100" value="0" id="confidenceRange" oninput="updateConfidence(this.value)">
+                </div>
+                <div class="col-md-6 d-flex align-items-end justify-content-end">
+                    <button type="button" class="btn btn-primary me-2" onclick="applyFilters()">
+                        <i class="fas fa-search me-1"></i>Apply Filters
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+                        <i class="fas fa-eraser me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="row">
+            <div class="col-12">
+                <div class="map-container">
+                    <div id="map" style="position: relative;">
+                        <!-- Map Legend -->
+                        <div class="heatmap-legend">
+                            <h6 class="mb-2"><i class="fas fa-info-circle me-1"></i>Map Legend</h6>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ff0000;"></div>
+                                Critical Issues
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ff8c00;"></div>
+                                Major Issues
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ffd700;"></div>
+                                Moderate Issues
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #32cd32;"></div>
+                                Minor Issues
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #00bfff;"></div>
+                                Resolved Issues
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #9400d3;"></div>
+                                AI Verified
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let map;
+        let userLocation = null;
+        let allReports = [];
+        let currentMarkers = [];
+        let heatmapLayer = null;
+        let isHeatmapVisible = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            loadReportsData();
+        });
+
+        function initializeMap() {
+            // Initialize map with a default location (will be updated with user's location)
+            map = L.map('map').setView([19.0760, 72.8777], 12); // Mumbai as default
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Get user's actual location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        userLocation = [position.coords.latitude, position.coords.longitude];
+                        console.log('User location detected:', userLocation);
+                        
+                        // Center map on user's location
+                        map.setView(userLocation, 14);
+                        
+                        // Add user location marker with custom styling
+                        L.marker(userLocation, {
+                            icon: L.divIcon({
+                                className: 'user-location-marker',
+                                html: '<i class="fas fa-user text-white"></i>',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 15]
+                            })
+                        })
+                        .addTo(map)
+                        .bindPopup('<div class="text-center"><h6>📍 Your Location</h6><small>Issues near you will be prioritized</small></div>')
+                        .openPopup();
+                    },
+                    function(error) {
+                        console.error('Geolocation error:', error);
+                        // Fallback to IP-based location or ask user
+                        showLocationPrompt();
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000 // 5 minutes cache
+                    }
+                );
+            } else {
+                showLocationPrompt();
+            }
+        }
+
+        function showLocationPrompt() {
+            if (confirm('Location access is needed for better experience. Would you like to manually set your location?')) {
+                // You could implement a location picker here
+                alert('Please enable location access and refresh the page for the best experience.');
+            }
+        }
+
+        function loadReportsData() {
+            fetch('/api/community/reports/all', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    allReports = data.reports;
+                    displayReportsOnMap(allReports);
+                    console.log(`Loaded ${allReports.length} reports`);
+                } else {
+                    console.error('Failed to load reports:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading reports:', error);
+            });
+        }
+
+        function displayReportsOnMap(reports) {
+            // Clear existing markers
+            currentMarkers.forEach(marker => map.removeLayer(marker));
+            currentMarkers = [];
+
+            reports.forEach(report => {
+                if (report.latitude && report.longitude) {
+                    const marker = createReportMarker(report);
+                    marker.addTo(map);
+                    currentMarkers.push(marker);
+                }
+            });
+        }
+
+        function createReportMarker(report) {
+            const color = getSeverityColor(report.severity);
+            const icon = getCategoryIcon(report.category);
+            
+            const marker = L.marker([report.latitude, report.longitude], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background: ${color}; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">${icon}</div>`,
+                    iconSize: [25, 25],
+                    iconAnchor: [12.5, 12.5]
+                })
+            });
+
+            // Create detailed popup
+            const popupContent = `
+                <div class="report-popup" style="min-width: 250px;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-1">${report.title}</h6>
+                        <span class="severity-badge severity-${report.severity.toLowerCase()}">${report.severity}</span>
+                    </div>
+                    <p class="mb-2 text-muted" style="font-size: 0.9rem;">${report.description.substring(0, 100)}${report.description.length > 100 ? '...' : ''}</p>
+                    <div class="mb-2">
+                        <small><strong>Category:</strong> ${report.category}</small><br>
+                        <small><strong>Status:</strong> <span class="badge bg-${getStatusColor(report.status)}">${report.status}</span></small><br>
+                        <small><strong>Reported:</strong> ${new Date(report.createdAt).toLocaleDateString()}</small>
+                    </div>
+                    ${report.imagePath ? `<div class="mb-2"><img src="/uploads/${report.imagePath}" class="img-fluid rounded" style="max-height: 150px; width: 100%; object-fit: cover;"></div>` : ''}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-success"><i class="fas fa-thumbs-up"></i> ${report.upvotes}</small>
+                            <small class="text-danger ms-2"><i class="fas fa-thumbs-down"></i> ${report.downvotes}</small>
+                        </div>
+                        ${report.aiVerified ? '<small class="text-primary"><i class="fas fa-robot"></i> AI Verified</small>' : ''}
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent, {
+                maxWidth: 300,
+                className: 'custom-popup'
+            });
+
+            return marker;
+        }
+
+        function getSeverityColor(severity) {
+            const colors = {
+                'MINOR': '#32cd32',
+                'MODERATE': '#ffd700', 
+                'MAJOR': '#ff8c00',
+                'CRITICAL': '#ff0000'
+            };
+            return colors[severity] || '#007bff';
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                'POTHOLE': '🕳',
+                'GARBAGE': '🗑',
+                'STREETLIGHT': '💡',
+                'FLOOD': '🌊',
+                'TRAFFIC': '🚦',
+                'VANDALISM': '🚫',
+                'OTHER': '📍'
+            };
+            return icons[category] || '📍';
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'PENDING': 'warning',
+                'VERIFIED': 'success',
+                'IN_PROGRESS': 'info',
+                'RESOLVED': 'success',
+                'REJECTED': 'danger'
+            };
+            return colors[status] || 'secondary';
+        }
+
+        function toggleHeatmap() {
+            if (isHeatmapVisible) {
+                // Hide heatmap, show markers
+                if (heatmapLayer) {
+                    map.removeLayer(heatmapLayer);
+                }
+                currentMarkers.forEach(marker => marker.addTo(map));
+                document.getElementById('toggleHeatmap').innerHTML = '<i class="fas fa-fire me-1"></i>Toggle Heatmap';
+                isHeatmapVisible = false;
+            } else {
+                // Show heatmap, hide markers
+                createHeatmap();
+                currentMarkers.forEach(marker => map.removeLayer(marker));
+                document.getElementById('toggleHeatmap').innerHTML = '<i class="fas fa-map-marker-alt me-1"></i>Show Markers';
+                isHeatmapVisible = true;
+            }
+        }
+
+        function createHeatmap() {
+            const heatmapData = allReports
+                .filter(report => report.latitude && report.longitude)
+                .map(report => {
+                    const intensity = getSeverityIntensity(report.severity);
+                    return [report.latitude, report.longitude, intensity];
+                });
+
+            if (heatmapLayer) {
+                map.removeLayer(heatmapLayer);
+            }
+
+            heatmapLayer = L.heatLayer(heatmapData, {
+                radius: 25,
+                blur: 15,
+                maxZoom: 17,
+                gradient: {
+                    0.0: '#32cd32',  // Minor - Green
+                    0.3: '#ffd700',  // Moderate - Yellow  
+                    0.6: '#ff8c00',  // Major - Orange
+                    1.0: '#ff0000'   // Critical - Red
+                }
+            }).addTo(map);
+        }
+
+        function getSeverityIntensity(severity) {
+            const intensities = {
+                'MINOR': 0.2,
+                'MODERATE': 0.4,
+                'MAJOR': 0.7,
+                'CRITICAL': 1.0
+            };
+            return intensities[severity] || 0.3;
+        }
+
+        function applyFilters() {
+            const status = document.getElementById('statusFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            const severity = document.getElementById('severityFilter').value;
+            const aiVerifiedOnly = document.getElementById('aiVerifiedOnly').checked;
+            const minConfidence = document.getElementById('confidenceRange').value / 100;
+
+            let filteredReports = allReports;
+
+            if (status !== 'all') {
+                filteredReports = filteredReports.filter(r => r.status === status);
+            }
+            if (type !== 'all') {
+                filteredReports = filteredReports.filter(r => r.category === type);
+            }
+            if (severity !== 'all') {
+                filteredReports = filteredReports.filter(r => r.severity === severity);
+            }
+            if (aiVerifiedOnly) {
+                filteredReports = filteredReports.filter(r => r.aiVerified);
+            }
+            if (minConfidence > 0) {
+                filteredReports = filteredReports.filter(r => (r.aiConfidence || 0) >= minConfidence);
+            }
+
+            displayReportsOnMap(filteredReports);
+            
+            // Update heatmap if visible
+            if (isHeatmapVisible) {
+                const heatmapData = filteredReports
+                    .filter(report => report.latitude && report.longitude)
+                    .map(report => {
+                        const intensity = getSeverityIntensity(report.severity);
+                        return [report.latitude, report.longitude, intensity];
+                    });
+                
+                if (heatmapLayer) {
+                    map.removeLayer(heatmapLayer);
+                }
+                heatmapLayer = L.heatLayer(heatmapData, {
+                    radius: 25,
+                    blur: 15,
+                    maxZoom: 17,
+                    gradient: {
+                        0.0: '#32cd32',
+                        0.3: '#ffd700',
+                        0.6: '#ff8c00',
+                        1.0: '#ff0000'
+                    }
+                }).addTo(map);
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('typeFilter').value = 'all';
+            document.getElementById('severityFilter').value = 'all';
+            document.getElementById('aiVerifiedOnly').checked = false;
+            document.getElementById('confidenceRange').value = 0;
+            updateConfidence(0);
+            displayReportsOnMap(allReports);
+        }
+
+        function updateConfidence(value) {
+            document.getElementById('confidenceValue').textContent = value + '%';
+        }
+
+        function refreshData() {
+            loadReportsData();
+        }
+    </script>
+</body>
+</html>

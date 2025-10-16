@@ -1,0 +1,103 @@
+spring:
+  application:
+    name: civic-chain
+  
+  # Database Configuration 
+  datasource:
+    # H2 Database (Development)
+    url: jdbc:h2:file:./data/civicchain;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: civicchain123
+    
+    # MySQL Database (Production - uncomment to use)
+    # url: jdbc:mysql://localhost:3306/civicchain?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
+    # driver-class-name: com.mysql.cj.jdbc.Driver
+    # username: civicchain_user
+    # password: civicchain_password
+    
+    # Connection Pool Settings
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 20000
+      leak-detection-threshold: 60000
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # Reset database to fix Role enum issues
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: false  # Changed to false to reduce log noise
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        # dialect: org.hibernate.dialect.MySQL8Dialect  # For MySQL
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # File upload configuration
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  
+  # Thymeleaf configuration
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+
+# Application specific configuration
+civicchain:
+  jwt:
+    secret: myVerySecureSecretKeyThatIsLongEnoughForHS512Algorithm123456789012345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ
+    expiration: 86400000 # 24 hours
+  
+  firebase:
+    config-path: firebase-service-account.json
+    storage-bucket: your-firebase-project.appspot.com
+    database-url: https://your-firebase-project-default-rtdb.firebaseio.com/
+  
+  ai:
+    demo-mode: true
+    confidence-threshold: 0.75
+  
+  blockchain:
+    demo-mode: true
+    network-url: https://polygon-mumbai.g.alchemy.com/v2/your-api-key
+    contract-address: "0x1234567890123456789012345678901234567890"
+  
+  points:
+    report-issue: 10
+    validate-issue: 5
+    resolve-issue: 20
+    community-validation: 3
+
+# Server configuration
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Logging
+logging:
+  level:
+    com.civicchain: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

@@ -1,0 +1,134 @@
+spring:
+  application:
+    name: civic-chain
+  
+  # MySQL Database Configuration for Production
+  datasource:
+    url: jdbc:mysql://localhost:3306/civicchain?useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USERNAME:civicchain_user}
+    password: ${MYSQL_PASSWORD:civicchain_password}
+    
+    # Production Connection Pool Settings
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 20000
+      leak-detection-threshold: 60000
+      pool-name: CivicChainHikariCP
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Use validate for production, update for development
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: false  # Disable SQL logging in production
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: false
+        jdbc:
+          batch_size: 50
+          fetch_size: 100
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+        connection:
+          provider_disables_autocommit: true
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region.factory_class: org.hibernate.cache.ehcache.EhCacheRegionFactory
+  
+  # H2 Console disabled in production
+  h2:
+    console:
+      enabled: false
+  
+  # File upload configuration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+  
+  # Thymeleaf configuration
+  thymeleaf:
+    cache: true  # Enable caching in production
+
+# Application specific configuration
+civicchain:
+  jwt:
+    secret: ${JWT_SECRET:myProductionSecretKey123456789012345678901234567890}
+    expiration: 86400000 # 24 hours
+  
+  firebase:
+    config-path: ${FIREBASE_CONFIG_PATH:firebase-service-account.json}
+    storage-bucket: ${FIREBASE_STORAGE_BUCKET:your-firebase-project.appspot.com}
+    database-url: ${FIREBASE_DATABASE_URL:https://your-firebase-project-default-rtdb.firebaseio.com/}
+  
+  ai:
+    demo-mode: false  # Disable demo mode in production
+    confidence-threshold: 0.75
+  
+  blockchain:
+    demo-mode: ${BLOCKCHAIN_DEMO_MODE:true}
+    network-url: ${BLOCKCHAIN_NETWORK_URL:https://polygon-mumbai.g.alchemy.com/v2/your-api-key}
+    contract-address: ${BLOCKCHAIN_CONTRACT_ADDRESS:"0x1234567890123456789012345678901234567890"}
+  
+  points:
+    report-issue: 10
+    validate-issue: 5
+    resolve-issue: 20
+    community-validation: 3
+
+# Server configuration
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+  error:
+    include-message: never  # Don't expose error messages in production
+    include-binding-errors: never
+    include-stacktrace: never
+  
+  # Security headers
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        secure: true
+
+# Logging configuration for production
+logging:
+  level:
+    com.civicchain: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/civicchain.log
+    max-size: 10MB
+    max-history: 30
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  security:
+    enabled: true

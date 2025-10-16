@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicChain - Civic Issue Reporting Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#home">
+                <i class="fas fa-city"></i> CivicChain
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#report">Report Issue</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#issues">Browse Issues</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#leaderboard">Leaderboard</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item" id="walletStatus">
+                        <button class="btn btn-outline-light" id="connectWallet">
+                            <i class="fas fa-wallet"></i> Connect MetaMask
+                        </button>
+                    </li>
+                    <li class="nav-item dropdown" id="userMenu" style="display: none;">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> <span id="userPoints">0 pts</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#profile">Profile</a></li>
+                            <li><a class="dropdown-item" href="#" id="adminPanel" style="display: none;">Admin Panel</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="logout">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <div class="hero-section">
+                <div class="container">
+                    <div class="row align-items-center">
+                        <div class="col-lg-6">
+                            <h1 class="display-4 mb-4">
+                                Empower Your Community with <span class="text-primary">CivicChain</span>
+                            </h1>
+                            <p class="lead mb-4">
+                                Report civic issues, earn rewards, and help build better communities. 
+                                Your voice matters, and now it's backed by blockchain technology.
+                            </p>
+                            <div class="d-flex gap-3 mb-4">
+                                <button class="btn btn-primary btn-lg" onclick="showSection('report')">
+                                    <i class="fas fa-plus"></i> Report an Issue
+                                </button>
+                                <button class="btn btn-outline-primary btn-lg" onclick="showSection('issues')">
+                                    <i class="fas fa-search"></i> Browse Issues
+                                </button>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <h3 class="text-primary" id="totalIssues">0</h3>
+                                    <p class="small">Issues Reported</p>
+                                </div>
+                                <div class="col-4">
+                                    <h3 class="text-success" id="resolvedIssues">0</h3>
+                                    <p class="small">Issues Resolved</p>
+                                </div>
+                                <div class="col-4">
+                                    <h3 class="text-info" id="totalUsers">0</h3>
+                                    <p class="small">Active Users</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="feature-grid">
+                                <div class="feature-card">
+                                    <i class="fas fa-camera"></i>
+                                    <h5>Photo & Video</h5>
+                                    <p>Capture evidence with multiple media types</p>
+                                </div>
+                                <div class="feature-card">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <h5>GPS Location</h5>
+                                    <p>Automatic location tracking for accurate reporting</p>
+                                </div>
+                                <div class="feature-card">
+                                    <i class="fas fa-robot"></i>
+                                    <h5>AI Verification</h5>
+                                    <p>Smart analysis to validate issue authenticity</p>
+                                </div>
+                                <div class="feature-card">
+                                    <i class="fas fa-coins"></i>
+                                    <h5>Earn Tokens</h5>
+                                    <p>Get rewarded for community participation</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Authentication Modal -->
+        <div class="modal fade" id="authModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="authModalTitle">Login</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Login Form -->
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="loginUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="loginUsername" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="loginPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Login</button>
+                        </form>
+
+                        <!-- Register Form -->
+                        <form id="registerForm" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="regUsername" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="regUsername" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="regEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="regEmail" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="regPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="regPassword" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="regFullName" class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" id="regFullName">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="regCity" class="form-label">City</label>
+                                    <input type="text" class="form-control" id="regCity">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="regState" class="form-label">State</label>
+                                    <input type="text" class="form-control" id="regState">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Register</button>
+                        </form>
+
+                        <div class="text-center mt-3">
+                            <a href="#" id="toggleAuth">Don't have an account? Register</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Issue Section -->
+        <section id="report" class="section">
+            <div class="container">
+                <h2 class="text-center mb-5">Report a Civic Issue</h2>
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <form id="reportForm" class="card p-4">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="issueTitle" class="form-label">Issue Title *</label>
+                                    <input type="text" class="form-control" id="issueTitle" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="issueType" class="form-label">Issue Type *</label>
+                                    <select class="form-select" id="issueType" required>
+                                        <option value="">Select Type</option>
+                                        <option value="POTHOLE">Pothole</option>
+                                        <option value="STREETLIGHT_FAILURE">Street Light Failure</option>
+                                        <option value="GARBAGE_COLLECTION">Garbage Collection</option>
+                                        <option value="BROKEN_SIDEWALK">Broken Sidewalk</option>
+                                        <option value="TRAFFIC_SIGNAL_ISSUE">Traffic Signal Issue</option>
+                                        <option value="WATER_LEAK">Water Leak</option>
+                                        <option value="GRAFFITI">Graffiti</option>
+                                        <option value="ILLEGAL_PARKING">Illegal Parking</option>
+                                        <option value="NOISE_COMPLAINT">Noise Complaint</option>
+                                        <option value="ABANDONED_VEHICLE">Abandoned Vehicle</option>
+                                        <option value="OTHER">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="issueDescription" class="form-label">Description *</label>
+                                <textarea class="form-control" id="issueDescription" rows="4" required></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="issuePriority" class="form-label">Priority</label>
+                                    <select class="form-select" id="issuePriority">
+                                        <option value="LOW">Low</option>
+                                        <option value="MEDIUM" selected>Medium</option>
+                                        <option value="HIGH">High</option>
+                                        <option value="URGENT">Urgent</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="issueSeverity" class="form-label">Severity</label>
+                                    <select class="form-select" id="issueSeverity">
+                                        <option value="MINOR">Minor</option>
+                                        <option value="MODERATE" selected>Moderate</option>
+                                        <option value="MAJOR">Major</option>
+                                        <option value="CRITICAL">Critical</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <button type="button" class="btn btn-outline-primary w-100 mt-4" id="getLocation">
+                                        <i class="fas fa-map-marker-alt"></i> Get Current Location
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row" id="locationFields" style="display: none;">
+                                <div class="col-md-6 mb-3">
+                                    <label for="issueLatitude" class="form-label">Latitude</label>
+                                    <input type="number" step="any" class="form-control" id="issueLatitude" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="issueLongitude" class="form-label">Longitude</label>
+                                    <input type="number" step="any" class="form-control" id="issueLongitude" readonly>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="issueAddress" class="form-label">Address</label>
+                                <input type="text" class="form-control" id="issueAddress">
+                            </div>
+                            
+                            <!-- Media Upload Section -->
+                            <div class="mb-4">
+                                <h5>Attach Evidence (Accessibility Supported)</h5>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Photos</label>
+                                        <input type="file" class="form-control" id="photoUpload" multiple accept="image/*">
+                                        <div class="mt-2" id="photoPreview"></div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Videos</label>
+                                        <input type="file" class="form-control" id="videoUpload" multiple accept="video/*">
+                                        <div class="mt-2" id="videoPreview"></div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Voice Recording</label>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-outline-secondary" id="startRecording">
+                                                <i class="fas fa-microphone"></i> Record
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger" id="stopRecording" disabled>
+                                                <i class="fas fa-stop"></i> Stop
+                                            </button>
+                                        </div>
+                                        <div class="mt-2" id="audioPreview"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-paper-plane"></i> Submit Report
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Browse Issues Section -->
+        <section id="issues" class="section">
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Community Issues</h2>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" id="filterStatus" style="width: auto;">
+                            <option value="">All Status</option>
+                            <option value="REPORTED">Reported</option>
+                            <option value="AI_VERIFIED">AI Verified</option>
+                            <option value="COMMUNITY_VALIDATED">Community Validated</option>
+                            <option value="ASSIGNED">Assigned</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="RESOLVED">Resolved</option>
+                        </select>
+                        <select class="form-select" id="filterType" style="width: auto;">
+                            <option value="">All Types</option>
+                            <option value="POTHOLE">Pothole</option>
+                            <option value="STREETLIGHT_FAILURE">Street Light</option>
+                            <option value="GARBAGE_COLLECTION">Garbage</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row" id="issuesContainer">
+                    <!-- Issues will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section id="leaderboard" class="section">
+            <div class="container">
+                <h2 class="text-center mb-5">Community Leaderboard</h2>
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="leaderboardTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>User</th>
+                                                <th>Level</th>
+                                                <th>Points</th>
+                                                <th>Issues Reported</th>
+                                                <th>Token Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Leaderboard data will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/metamask.js"></script>
+    <script src="/js/accessibility.js"></script>
+</body>
+</html>

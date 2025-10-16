@@ -134,21 +134,9 @@ mvn clean install
 **Development (Default)**: Uses file-based H2 database with persistence
 - Data is stored in `./data/civicchain.mv.db`
 - H2 Console: http://localhost:8080/h2-console
-- JDBC URL: `jdbc:h2:file:./data/civicchain`
-- Username: `sa`, Password: `civicchain123`
 
 **Production (MySQL)**: For production deployment
 1. Run the setup script: `mysql -u root -p < setup-mysql.sql`
-2. In `application.yml`, uncomment MySQL configuration:
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/civicchain?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: civicchain_user
-    password: civicchain_password
-```
 
 ### 3. Firebase Setup (Optional)
 1. Create a Firebase project
